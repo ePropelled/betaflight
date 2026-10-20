@@ -65,7 +65,23 @@ void ledInit(const statusLedConfig_t *statusLedConfig)
         leds[i] = IOGetByTag(statusLedConfig->ioTags[i]);
         if (leds[i]) {
             IOInit(leds[i], OWNER_LED, RESOURCE_INDEX(i));
-            IOConfigGPIO(leds[i], IOCFG_OUT_PP);
+            ioConfig_t config = IOCFG_OUT_PP;
+#if defined(LED0_OPEN_DRAIN)
+            if (i == 0) {
+                config = IOCFG_OUT_OD;
+            }
+#endif
+#if defined(LED1_OPEN_DRAIN)
+            if (i == 1) {
+                config = IOCFG_OUT_OD;
+            }
+#endif
+#if defined(LED2_OPEN_DRAIN)
+            if (i == 2) {
+                config = IOCFG_OUT_OD;
+            }
+#endif
+            IOConfigGPIO(leds[i], config);
         }
         ledSet(i, false);
     }
