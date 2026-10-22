@@ -356,6 +356,9 @@ static bool accNeedsCalibration(void)
 
 void updateArmingStatus(void)
 {
+#if defined(USE_HSI_RGB_STATUS)
+    hsiArmedLedSet(ARMING_FLAG(ARMED));
+#endif
 
     if (ARMING_FLAG(ARMED)) {
         LED0_ON;

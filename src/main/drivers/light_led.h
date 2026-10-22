@@ -60,4 +60,9 @@ void ledInit(const statusLedConfig_t *statusLedConfig);
 void ledToggle(int led);
 void ledSet(int led, bool state);
 
+#if defined(USE_HSI_RGB_STATUS)
+void hsiHeartbeatUpdate(void);
+void hsiArmedLedSet(bool armed);
+#endif
+
 #endif

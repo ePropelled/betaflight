@@ -20,6 +20,10 @@
 
 #include "platform.h"
 
+#include "common/time.h"
+
+#include "drivers/time.h"
+
 #include "pg/pg_ids.h"
 
 #include "drivers/io.h"
@@ -30,6 +34,42 @@
 
 static IO_t leds[STATUS_LED_COUNT];
 static uint8_t ledInversion = 0;
+
+#if defined(USE_HSI_RGB_STATUS)
+static bool ledStates[STATUS_LED_COUNT];
+static IO_t heartbeatLed;
+static IO_t armedLed;
+static timeMs_t heartbeatNextToggle;
+
+static void hsiRgbRender(void)
+{
+    const bool red = ledStates[2];
+    const bool green = ledStates[1] || ledStates[2];
+    const bool blue = ledStates[0];
+
+    IOWrite(leds[0], blue ? (ledInversion & BIT(0)) : !(ledInversion & BIT(0)));
+    IOWrite(leds[1], green ? (ledInversion & BIT(1)) : !(ledInversion & BIT(1)));
+    IOWrite(leds[2], red ? (ledInversion & BIT(2)) : !(ledInversion & BIT(2)));
+}
+
+static void hsiIndicatorInit(void)
+{
+    heartbeatLed = IOGetByTag(IO_TAG(HEARTBEAT_LED_PIN));
+    if (heartbeatLed) {
+        IOInit(heartbeatLed, OWNER_LED, 3);
+        IOConfigGPIO(heartbeatLed, IOCFG_OUT_OD);
+        IOHi(heartbeatLed);
+        heartbeatNextToggle = millis() + 500;
+    }
+
+    armedLed = IOGetByTag(IO_TAG(ARMED_PIN));
+    if (armedLed) {
+        IOInit(armedLed, OWNER_LED, 4);
+        IOConfigGPIO(armedLed, IOCFG_OUT_OD);
+        IOHi(armedLed);
+    }
+}
+#endif
 
 PG_REGISTER_WITH_RESET_TEMPLATE(statusLedConfig_t, statusLedConfig, PG_STATUS_LED_CONFIG, 0);
 
@@ -83,8 +123,17 @@ void ledInit(const statusLedConfig_t *statusLedConfig)
 #endif
             IOConfigGPIO(leds[i], config);
         }
+#if defined(USE_HSI_RGB_STATUS)
+        ledStates[i] = false;
+#else
         ledSet(i, false);
+#endif
     }
+
+#if defined(USE_HSI_RGB_STATUS)
+    hsiRgbRender();
+    hsiIndicatorInit();
+#endif
 }
 
 void ledToggle(int led)
@@ -92,7 +141,12 @@ void ledToggle(int led)
     if (led < 0 || led >= (int)ARRAYLEN(leds)) {
         return;
     }
+#if defined(USE_HSI_RGB_STATUS)
+    ledStates[led] = !ledStates[led];
+    hsiRgbRender();
+#else
     IOToggle(leds[led]);
+#endif
 }
 
 void ledSet(int led, bool on)
@@ -100,8 +154,30 @@ void ledSet(int led, bool on)
     if (led < 0 || led >= (int)ARRAYLEN(leds)) {
         return;
     }
+#if defined(USE_HSI_RGB_STATUS)
+    ledStates[led] = on;
+    hsiRgbRender();
+#else
     const bool inverted = ledInversion & (1 << led);
     IOWrite(leds[led], on ? inverted : !inverted);
+#endif
 }
+
+#if defined(USE_HSI_RGB_STATUS)
+void hsiHeartbeatUpdate(void)
+{
+    if (heartbeatLed && cmpTimeMs(millis(), heartbeatNextToggle) >= 0) {
+        IOToggle(heartbeatLed);
+        heartbeatNextToggle += 500;
+    }
+}
+
+void hsiArmedLedSet(bool armed)
+{
+    if (armedLed) {
+        IOWrite(armedLed, !armed);
+    }
+}
+#endif
 
 #endif

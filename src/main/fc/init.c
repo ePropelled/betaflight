@@ -437,7 +437,11 @@ void initPhase1(void)
 #if !defined(USE_VIRTUAL_LED)
     ledInit(statusLedConfig());
 #endif
+#if defined(USE_HSI_RGB_STATUS)
+    LED0_ON;
+#else
     LED2_ON;
+#endif
 
     EXTIInit();
 }
@@ -770,7 +774,13 @@ void initPhase3(void)
     LED0_OFF;
     LED2_OFF;
 
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i <
+#if defined(USE_HSI_RGB_STATUS)
+        5
+#else
+        10
+#endif
+        ; i++) {
         LED1_TOGGLE;
         LED0_TOGGLE;
 #if defined(USE_BEEPER)
@@ -791,6 +801,9 @@ void initPhase3(void)
 
     LED0_OFF;
     LED1_OFF;
+#if defined(USE_HSI_RGB_STATUS)
+    LED2_ON;
+#endif
 
 
     imuInit();

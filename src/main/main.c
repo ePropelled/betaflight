@@ -147,6 +147,9 @@ int main(int argc, char * argv[])
 void FAST_CODE run(void)
 {
     while (true) {
+#if defined(USE_HSI_RGB_STATUS)
+        hsiHeartbeatUpdate();
+#endif
         scheduler();
 
 #if defined(RUN_LOOP_DELAY_US) && RUN_LOOP_DELAY_US > 0
